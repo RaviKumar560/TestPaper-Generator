@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TrilectUs - Java Test Paper</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .navbar {
+            background: #003366;
+            padding: 15px;
+            text-align: center;
+            color: white;
+            font-size: 22px;
+            font-weight: bold;
+        }
+        .container {
+            max-width: 900px;
+            margin: 20px auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h1, h2 {
+            text-align: center;
+            color: #003366;
+        }
+        .form-container {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        select, input, button {
+            padding: 10px;
+            font-size: 16px;
+            margin: 5px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+        button {
+            background: #003366;
+            color: white;
+            cursor: pointer;
+            border: none;
+        }
+        button:hover {
+            background: #0055cc;
+        }
+        ol {
+            padding-left: 25px;
+            line-height: 30px;
+            font-size: 18px;
+        }
+        .footer {
+            text-align: center;
+            padding: 10px;
+            background: #003366;
+            color: white;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="navbar">
+        TrilectUs - Java Test Paper Generator
+    </div>
+
+    <div class="container">
+        <h1>Generate Your Test Paper</h1>
+
+        <div class="form-container">
+            <label for="username"><strong>Name:</strong></label>
+            <input type="text" id="username" placeholder="Enter your name" required>
+
+            <label for="email"><strong>Email:</strong></label>
+            <input type="email" id="email" placeholder="Enter your email" required>
+        </div>
+
+        <div class="form-container">
+            <label for="topic"><strong>Select Topic:</strong></label>
+            <select id="topic" name="topic">
+                <option value="Core Java">Core Java</option>
+                <option value="Java Multithreading">Java Multithreading</option>
+                <option value="Java Collections">Java Collections</option>
+                <option value="Jdbc">JDBC</option>
+                <option value="All Question">All Question</option>
+            </select>
+            <button onclick="generateTestPaper()">Generate</button>
+        </div>
+
+        <div id="test-paper" style="display: none;">
+            <h2 id="test-title"></h2>
+            <p><strong>Date:</strong> <input type="date" id="Date"></p>
+            <h3>Questions</h3>
+            <ol id="question-list"></ol>
+            <button onclick="submitTest()">Submit Test</button>
+            <button onclick="downloadPDF()">Download PDF</button> <!-- PDF Download Button -->
+        </div>
+    </div>
+
+    <div class="footer">
+        © 2025 TrilectUs | All Rights Reserved
+    </div>
+
+    <script>
+    function generateTestPaper() {
+        let topic = document.getElementById("topic").value;
+        fetch(`/generate?topic=${topic}`)
+            .then(response => response.json())
+            .then(data => {
+                let testPaper = document.getElementById("test-paper");
+                let questionList = document.getElementById("question-list");
+                let testTitle = document.getElementById("test-title");
+
+                testTitle.textContent = topic + " Assessment";
+                questionList.innerHTML = '';
+
+                data.forEach((question, index) => {
+                    let questionText = question.questionText.replace(/^\d+\)\s*|\s*\d+\)$/g, '');
+                    if (/interview/i.test(questionText)) return;
+                    let listItem = document.createElement("li");
+                    listItem.textContent = questionText;
+                    questionList.appendChild(listItem);
+                });
+                testPaper.style.display = "block";
+            })
+            .catch(error => console.error('Error fetching questions:', error));
+    }
+
+
+    function submitTest() {
+        let username = document.getElementById("username").value.trim();
+        let email = document.getElementById("email").value.trim();
+        let topic = document.getElementById("topic").value;
+        let testDate = document.getElementById("Date").value;
+
+        if (username === "" || email === "" || testDate === "") {
+            alert("Please fill in all fields before submitting.");
+            return;
+        }
+
+        let formData = new URLSearchParams();
+        formData.append("username", username);
+        formData.append("email", email);
+        formData.append("topic", topic);
+        formData.append("Date", testDate);
+
+        fetch("/submit", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: formData.toString()
+        })
+        .then(response => response.text())
+        .then(data => {
+            alert(data);
+            document.getElementById("test-paper").style.display = "none";
+        })
+        .catch(error => console.error('Error submitting test:', error));
+    }
+    
+    
+    function downloadPDF() {
+        const { jsPDF } = window.jspdf;
+        let doc = new jsPDF();
+
+        let username = document.getElementById("username").value;
+        let email = document.getElementById("email").value;
+        let topic = document.getElementById("topic").value;
+        let date = document.getElementById("Date").value;
+        let questions = document.querySelectorAll("#question-list li");
+
+        let yPosition = 30;
+        let pageWidth = 190; // Width of the text area inside the border
+        let lineHeight = 8;  // Spacing between lines
+
+        // Draw Border
+        doc.setDrawColor(0);
+        doc.setLineWidth(2);
+        doc.rect(5, 5, 200, 287); // Border dimensions
+
+        // Company Header
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(22);
+        doc.setTextColor(0, 51, 102);
+        doc.text("TrilectUs", 75, yPosition);
+        doc.setFontSize(16);
+        doc.setTextColor(100);
+        doc.text("Java Test Paper", 75, yPosition + 10);
+        yPosition += 25;
+
+        // User Info Section
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(16);
+        doc.setTextColor(0, 0, 0);
+        doc.text("Candidate Details:", 10, yPosition);
+        yPosition += 8;
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(14);
+        doc.text(`Name: ${username}`, 10, yPosition);
+        doc.text(`Email: ${email}`, 120, yPosition);
+        yPosition += 8;
+        doc.text(`Topic: ${topic}`, 10, yPosition);
+        doc.text(`Date: ${date}`, 120, yPosition);
+        yPosition += 12;
+
+        // Questions Section
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(16);
+        doc.setTextColor(0, 51, 102);
+        doc.text("Test Questions:", 10, yPosition);
+        yPosition += 8;
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(14);
+        doc.setTextColor(0, 0, 0);
+
+        questions.forEach((question, index) => {
+            let wrappedText = doc.splitTextToSize(`${index + 1}. ${question.textContent}`, pageWidth - 20);
+
+            // If text reaches page bottom, create a new page
+            if (yPosition + wrappedText.length * lineHeight > 270) { 
+                doc.addPage();
+                doc.rect(5, 5, 200, 287); // Border for new page
+                yPosition = 30;
+            }
+
+            // Print the wrapped question
+            doc.text(wrappedText, 10, yPosition);
+            yPosition += wrappedText.length * lineHeight; // Adjust Y position
+        });
+
+        doc.save(`${topic}_TestPaper.pdf`);
+    }
+    </script>
+
+</body>
+</html>
